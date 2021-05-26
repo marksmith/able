@@ -7,39 +7,34 @@
 #include <string.h>
 #include "trap.h"
 
+#define DS0 ABLE_CORE_DSV(&host->c, 1)
+#define DS1 ABLE_CORE_DSV(&host->c, 2)
+
 #define P(C, Y) \
 	fprintf(stderr, "%02"PRIX8"(%d) %"PRId64" %08"PRIX64" %"PRId64"/%"PRIX64" %"PRId64"/%"PRIX64" (%"PRIu8"); %"PRId64"/%"PRIX64" (%"PRIu8")\n", \
 		(C)->i, \
 		(Y), \
 		(C)->ts, \
 		(C)->p, \
-		(C)->d1, (C)->d1, \
-		(C)->d0, (C)->d0, \
+		(C)->dp >= 2 ? ABLE_CORE_DSV(C, 2) : 0, (C)->dp >= 2 ? ABLE_CORE_DSV(C, 2) : 0, \
+		(C)->dp >= 1 ? ABLE_CORE_DSV(C, 1) : 0, (C)->dp >= 1 ? ABLE_CORE_DSV(C, 1) : 0, \
 		(C)->dp, \
-		(C)->c0, (C)->c0, \
+		(C)->cp >= 1 ? ABLE_CORE_CSV(C, 1) : 0, (C)->cp >= 1 ? ABLE_CORE_CSV(C, 1) : 0, \
 		(C)->cp);
 
-#define DSI(C) \
-	(C)->d[(C)->dp] = (C)->d1; \
-	(C)->dp = (C)->dp + 1 & 31; \
-	(C)->d1 = (C)->d0;
+#define DSI ABLE_CORE_DSI
 
 #define DSR(C) \
-	(C)->d0 = 0; \
-	(C)->d1 = 0; \
-	memset((C)->d, 0, sizeof((C)->d)); \
 	(C)->dp = 0;
 
 #define CSR(C) \
-	(C)->c0 = 0; \
-	memset((C)->c, 0, sizeof((C)->c)); \
 	(C)->cp = 0;
 
 #define T(C, N) \
 	DSI(C); \
-	host->c.d0 = host->c.p - 1; \
+	DS0 = host->c.p - 1; \
 	DSI(C); \
-	host->c.d0 = (N); \
+	DS0 = (N); \
 	host->c.p = 0;
 
 int
@@ -85,9 +80,9 @@ host_exec(able_host_t *host) {
 						uint8_t cp;
 						cp = host->c.cp;
 						DSI(&host->c);
-						host->c.d0 = cp;
+						DS0 = cp;
 						DSI(&host->c);
-						host->c.d0 = dp;
+						DS0 = dp;
 						break;
 					}
 					case 0xfe: // debug
