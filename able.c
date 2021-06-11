@@ -19,7 +19,7 @@ extern char *__progname;
 
 void
 usage() {
-	fprintf(stderr, "usage: %s [-h] [-d size] [-c size] [-r size] [-m size] [file]\n", __progname);
+	fprintf(stderr, "usage: %s [-h] [-d size] [-c size] [-r size] [-m size] [-b base] [file]\n", __progname);
 	exit(1);
 }
 
@@ -58,9 +58,13 @@ main(int argc, char *argv[]) {
 	mopt = false;
 	uint64_t moptarg;
 	moptarg = 0;
+	bool bopt;
+	bopt = false;
+	uint64_t boptarg;
+	boptarg = 0;
 
 	char c;
-	while ((c = getopt(argc, argv, "hd:c:r:m:")) != -1) {
+	while ((c = getopt(argc, argv, "hd:c:r:m:b:")) != -1) {
 		switch (c) {
 			case 'd':
 				if (dopt)
@@ -85,6 +89,12 @@ main(int argc, char *argv[]) {
 					usage();
 				mopt = true;
 				moptarg = eatoi(optarg);
+				break;
+			case 'b':
+				if (bopt)
+					usage();
+				bopt = true;
+				boptarg = eatoi(optarg);
 				break;
 			case 'h':
 			default:
@@ -116,11 +126,14 @@ main(int argc, char *argv[]) {
 		moptarg = ifs.st_size;
 	}
 
+	if (boptarg > moptarg)
+		usage();
+
 	int ifd;
 	ifd = open(ifn, O_RDWR);
 	if (ifd == -1)
 		err(3, "open");
-	void *b;
+	uint8_t *b;
 	b = mmap(NULL, moptarg, PROT_READ|PROT_WRITE, MAP_SHARED, ifd, 0);
 	if (b == MAP_FAILED)
 		err(3, "mmap");
@@ -189,8 +202,8 @@ main(int argc, char *argv[]) {
 	h0.pc = 256;
 	h0.l = h0l;
 	h0.lc = 256;
-	h0.c.b = b;
-	h0.c.bc = moptarg;
+	h0.c.b = &b[boptarg];
+	h0.c.bc = moptarg - boptarg;
 	h0.c.d = h0d;
 	h0.c.dc = doptarg;
 	h0.c.c = h0c;
